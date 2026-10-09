@@ -48,6 +48,7 @@ pub trait PhysicalOptimizerContext: Send + Sync {
 /// Use [`SessionState::add_physical_optimizer_rule`] to register additional
 /// `PhysicalOptimizerRule`s.
 ///
+/// TODO; @tjnangosha - this line contains a stale doc link. The method `add_physical_optimizer_rule` does not exist on `SessionState` anymore
 /// [`SessionState::add_physical_optimizer_rule`]: https://docs.rs/datafusion/latest/datafusion/execution/session_state/struct.SessionState.html#method.add_physical_optimizer_rule
 pub trait PhysicalOptimizerRule: Debug + std::any::Any {
     /// Rewrite `plan` to an optimized form.
