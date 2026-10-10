@@ -12,12 +12,29 @@ pub async fn optimizer_rule_reject_joins() -> Result<()> {
 
     ctx.register_batch("customers", customers_batch())?;
     ctx.register_batch("orders", orders_batch())?;
+    
+    // TODO; @tjnangosha - Test out against the dataframe API as well
 
+    // Choosing to "reject" joins has this effect of rejecting query statements that
+    // don't contain the JOIN keyword themselves. This is because internally, the optimiser
+    // will rewrite some statements into JOINs. And for some of these statements 
+    // there is no other way to execute them without using joins!
+    // Examples of such cases include the following - e.g `SELECT * from a,b`, 
+    // `IN (SELECT ...)`, `EXISTS (...)` and correlated scalar subqueries which are rewritten into semi / left  
+    // joins by the optimizer's subquery decorrelation rules
+    //.
+    // On the other hand, some statements like `SELECT DISTINCT c.name FROM customers c LEFT JOIN orders o ON c.name = o.name`
+    //  below will contain the JOIN keyword but will not be rejected by our rule
+    // Since inbuilt rules are applied before custom rules, the `EliminateJoin` rule.
+    // in datafusion/optimizer/src/eliminate_join.rs will optimise away the JOIN and by the time
+    // our custom rule is applied, there is no JOIN to reject.
     let sql1 = "SELECT id, c.name, amount_paid from customers c JOIN orders o on c.name = o.name";
-    let _sql2 = "SELECT DISTINCT c.name FROM customers c LEFT JOIN orders o ON c.name = o.name";
-    let plan = ctx.sql(sql1).await?.into_optimized_plan()?;
-
-    println!("[OptimizerRuleRejectJoins] Logical Plan:\n\n{}\n", plan.display_indent());
+    let sql2 = "SELECT DISTINCT c.name FROM customers c LEFT JOIN orders o ON c.name = o.name";
+    let sql3 = "SELECT * FROM customers, orders";
+    let sql4 = "SELECT * FROM customers, orders o WHERE o.name IN (SELECT name FROM orders)";
+    let sql5 = "SELECT * FROM customers c, orders WHERE EXISTS (SELECT 1 FROM orders o WHERE o.name = c.name)";
+    let sql6 = "SELECT name FROM customers INTERSECT SELECT name FROM orders";
+    ctx.sql(sql2).await?.into_optimized_plan()?;
 
     Ok(())
 }
@@ -40,6 +57,7 @@ impl OptimizerRule for OptimizerRuleRejectJoins {
         plan: LogicalPlan,
         _config: &dyn OptimizerConfig,
     ) -> Result<Transformed<LogicalPlan>> {
+        println!("[OptimizerRuleRejectJoins] Logical Plan:\n\n{}\n", plan.display_indent());
         match &plan {
             LogicalPlan::Join(_) | LogicalPlan::AsOfJoin(_) => {
                 not_impl_err!("JOIN operations are disabled")
