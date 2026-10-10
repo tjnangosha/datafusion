@@ -1,13 +1,25 @@
 use arrow::array::{ArrayRef, RecordBatch, StringArray, Int32Array};
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::execution::SessionStateBuilder;
 use datafusion::optimizer::{ ApplyOrder, OptimizerRule, OptimizerConfig };
 use datafusion::common::tree_node::{ Transformed };
 use datafusion::logical_expr::{ LogicalPlan };
+use datafusion::physical_optimizer::PhysicalOptimizerRule;
+use datafusion::physical_plan::joins::{
+    AsOfJoinExec, CrossJoinExec, HashJoinExec, NestedLoopJoinExec,
+    PiecewiseMergeJoinExec, SortMergeJoinExec, SymmetricHashJoinExec,
+};
 use datafusion::prelude::SessionContext;
 use datafusion::common::{ Result, not_impl_err };
 use std::sync::Arc;
+use datafusion::physical_plan::ExecutionPlan;
 
 pub async fn optimizer_rule_reject_joins() -> Result<()> {
-    let ctx = SessionContext::new();
+    let state  = SessionStateBuilder::new_with_default_features()
+        .with_physical_optimizer_rule(Arc::new(PhysicalOptimizerRuleRejectJoins {}))
+        .build();
+
+    let ctx = SessionContext::new_with_state(state);
     ctx.add_optimizer_rule(Arc::new(OptimizerRuleRejectJoins {}));
 
     ctx.register_batch("customers", customers_batch())?;
@@ -34,14 +46,14 @@ pub async fn optimizer_rule_reject_joins() -> Result<()> {
     let sql4 = "SELECT * FROM customers, orders o WHERE o.name IN (SELECT name FROM orders)";
     let sql5 = "SELECT * FROM customers c, orders WHERE EXISTS (SELECT 1 FROM orders o WHERE o.name = c.name)";
     let sql6 = "SELECT name FROM customers INTERSECT SELECT name FROM orders";
-    ctx.sql(sql2).await?.into_optimized_plan()?;
+    ctx.sql(sql1).await?.create_physical_plan().await?;
 
     Ok(())
 }
 
 #[derive(Default, Debug)]
 
-struct OptimizerRuleRejectJoins {}   
+struct OptimizerRuleRejectJoins {}
 
 impl OptimizerRule for OptimizerRuleRejectJoins {
     fn name(&self) -> &str {
@@ -66,6 +78,44 @@ impl OptimizerRule for OptimizerRuleRejectJoins {
         }
     }
 
+}
+
+#[derive(Default, Debug)]
+pub struct  PhysicalOptimizerRuleRejectJoins {}
+
+impl PhysicalOptimizerRule for PhysicalOptimizerRuleRejectJoins {
+    fn name(&self) -> &str {
+        "physical_optimizer_rule_reject_joins"
+    }
+    
+    fn optimize(
+        &self,
+        plan: Arc<dyn ExecutionPlan>,
+        config: &datafusion::config::ConfigOptions,
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+       // read-only walk: `apply` visits every node, root included
+        plan.apply(|node| {
+            if is_join(node.as_ref()) {
+                return not_impl_err!("JOIN operations are disabled (found {})", node.name());
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+        Ok(plan) // unchanged
+    }
+    
+    fn schema_check(&self) -> bool {
+        true
+    }
+}
+
+fn is_join(node: &dyn ExecutionPlan) -> bool {
+    node.is::<HashJoinExec>()
+        || node.is::<SortMergeJoinExec>()
+        || node.is::<NestedLoopJoinExec>()
+        || node.is::<CrossJoinExec>()
+        || node.is::<SymmetricHashJoinExec>()
+        || node.is::<PiecewiseMergeJoinExec>()
+        || node.is::<AsOfJoinExec>()
 }
 
 fn customers_batch() -> RecordBatch {
