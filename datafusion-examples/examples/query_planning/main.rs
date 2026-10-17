@@ -59,6 +59,7 @@ mod plan_to_sql;
 mod planner_api;
 mod pruning;
 mod thread_pools;
+mod safe_limit;
 
 use datafusion::error::{DataFusionError, Result};
 use strum::{IntoEnumIterator, VariantNames};
@@ -69,6 +70,7 @@ use strum_macros::{Display, EnumIter, EnumString, VariantNames};
 enum ExampleKind {
     All,
     AnalyzerRule,
+    SafeLimit,
     ExprApi,
     OptimizerRule,
     ParseSqlExpr,
@@ -93,6 +95,7 @@ impl ExampleKind {
                     Box::pin(example.run()).await?;
                 }
             }
+            ExampleKind::SafeLimit => safe_limit::safe_limit().await?,
             ExampleKind::AnalyzerRule => analyzer_rule::analyzer_rule().await?,
             ExampleKind::ExprApi => expr_api::expr_api()?,
             ExampleKind::OptimizerRule => optimizer_rule::optimizer_rule().await?,
