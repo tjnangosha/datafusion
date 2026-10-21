@@ -54,6 +54,7 @@
 mod analyzer_rule;
 mod expr_api;
 mod optimizer_rule;
+mod optimizer_rule_reject_joins;
 mod parse_sql_expr;
 mod plan_to_sql;
 mod planner_api;
@@ -71,6 +72,7 @@ enum ExampleKind {
     AnalyzerRule,
     ExprApi,
     OptimizerRule,
+    OptimizerRuleRejectJoins,
     ParseSqlExpr,
     PlanToSql,
     PlannerApi,
@@ -96,6 +98,7 @@ impl ExampleKind {
             ExampleKind::AnalyzerRule => analyzer_rule::analyzer_rule().await?,
             ExampleKind::ExprApi => expr_api::expr_api()?,
             ExampleKind::OptimizerRule => optimizer_rule::optimizer_rule().await?,
+            ExampleKind::OptimizerRuleRejectJoins => optimizer_rule_reject_joins::optimizer_rule_reject_joins().await?,
             ExampleKind::ParseSqlExpr => parse_sql_expr::parse_sql_expr().await?,
             ExampleKind::PlanToSql => plan_to_sql::plan_to_sql_examples().await?,
             ExampleKind::PlannerApi => planner_api::planner_api().await?,
