@@ -55,6 +55,7 @@ mod adapter_serialization;
 mod csv_json_opener;
 mod csv_sql_streaming;
 mod custom_datasource;
+mod custom_datasource_gitlogs;
 mod custom_file_casts;
 mod custom_file_format;
 mod default_column_values;
@@ -72,6 +73,7 @@ enum ExampleKind {
     CsvJsonOpener,
     CsvSqlStreaming,
     CustomDatasource,
+    CustomDataSourceGitLogs,
     CustomFileCasts,
     CustomFileFormat,
     DefaultColumnValues,
@@ -102,6 +104,9 @@ impl ExampleKind {
             }
             ExampleKind::CustomDatasource => {
                 custom_datasource::custom_datasource().await?
+            }
+             ExampleKind::CustomDataSourceGitLogs => {
+                custom_datasource_gitlogs::custom_datasource_gitlogs().await?
             }
             ExampleKind::CustomFileCasts => {
                 custom_file_casts::custom_file_casts().await?

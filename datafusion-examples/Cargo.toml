@@ -43,6 +43,7 @@ datafusion = { workspace = true, default-features = true, features = ["parquet_e
 nom = "8.0.0"
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "parking_lot", "fs"] }
+gix = "0.90"
 
 [dev-dependencies]
 arrow-flight = { workspace = true }
