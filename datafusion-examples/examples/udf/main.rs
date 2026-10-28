@@ -62,6 +62,7 @@ mod advanced_udf;
 mod advanced_udwf;
 mod async_udf;
 mod simple_udaf;
+mod simple_udaf_mode;
 mod simple_udf;
 mod simple_udtf;
 mod simple_udwf;
@@ -83,6 +84,7 @@ enum ExampleKind {
     StructUdaf,
     Udf,
     Udaf,
+    UdafMode,
     Udwf,
     Udtf,
     TableListUdtf,
@@ -111,6 +113,7 @@ impl ExampleKind {
                 struct_returning_udaf::struct_returning_udaf().await?
             }
             ExampleKind::Udaf => simple_udaf::simple_udaf().await?,
+            ExampleKind::UdafMode => simple_udaf_mode::simple_udaf_mode().await?,
             ExampleKind::Udf => simple_udf::simple_udf().await?,
             ExampleKind::Udtf => simple_udtf::simple_udtf().await?,
             ExampleKind::Udwf => simple_udwf::simple_udwf().await?,
